@@ -1,1 +1,66 @@
 
+name: Milvus Backup and Restore
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: "Select Backup or Restore"
+        required: true
+        type: choice
+        options:
+          - backup
+          - restore
+
+      backup_name:
+        description: "Backup name (required for restore)"
+        required: false
+        type: string
+
+      collection_name:
+        description: "Milvus collection name"
+        required: true
+        default: "my_collection"
+        type: string
+
+jobs:
+  milvus-backup-restore:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout GitHub repository
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Step 2: Setup Python
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # Step 3: Install dependencies
+      - name: Install Dependencies
+        run: |
+          pip install requests
+
+      # Step 4: Execute Backup
+      - name: Milvus Backup
+        if: inputs.operation == 'backup'
+        env:
+          MILVUS_BACKUP_API_URL: ${{ secrets.MILVUS_BACKUP_API_URL }}
+          OPERATION: backup
+          COLLECTIONS: ${{ inputs.collection_name }}
+        run: |
+          python scripts/milvus_backup.py
+
+      # Step 5: Execute Restore
+      - name: Milvus Restore
+        if: inputs.operation == 'restore'
+        env:
+          MILVUS_BACKUP_API_URL: ${{ secrets.MILVUS_BACKUP_API_URL }}
+          OPERATION: restore
+          COLLECTIONS: ${{ inputs.collection_name }}
+          BACKUP_NAME: ${{ inputs.backup_name }}
+          COLLECTION_SUFFIX: "_restored"
+        run: |
+          python scripts/milvus_backup.py
